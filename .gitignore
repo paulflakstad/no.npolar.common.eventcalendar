@@ -1,3 +1,19 @@
+# NetBeans project files
+/nbproject/
+# Build files
+/build/
+/build.xml
+# Distribution files
+/dist/
+# SVN files
+.svn/
+# library JARs
+/lib/
+# Non-interesting stuff
+*~
+/src/main/Main.java
+/manifest.mf
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
