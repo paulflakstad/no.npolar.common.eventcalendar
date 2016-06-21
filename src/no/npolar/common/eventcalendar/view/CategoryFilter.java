@@ -1,10 +1,12 @@
 package no.npolar.common.eventcalendar.view;
 
 /**
- * A category filter. When a filter is applied, the list should contain only
- * events that are tagged with the filter's corresponding category.
+ * A category filter.
+ * <p>
+ * When a filter is applied, the list should contain only events that are tagged 
+ * with the filter's corresponding category.
  * 
- * @author flakstad
+ * @author Paul-Inge Flakstad, Norwegian Polar Institute
  */
 import org.opencms.relations.CmsCategory;
 
@@ -19,14 +21,27 @@ public class CategoryFilter {
     private CmsCategory category = null;
     
     /**
-    * Creates a new filter from the given category.
-    * @param category  This filter's corresponding category.
-    */
+     * Creates a new filter from the given category.
+     * 
+     * @param category  This filter's corresponding category.
+     */
     public CategoryFilter(CmsCategory category) {
         this.name = category.getTitle();
         this.uri = category.getPath();
         this.category = category;
     }
+    
+    /**
+     * Creates a new filter from the given category and counter.
+     * 
+     * @param counter The number of hits for this category filter.
+     * @param category  This filter's corresponding category.
+     */
+    public CategoryFilter(CmsCategory category, int counter) {
+        this(category);
+        this.counter = counter;
+    }
+    
     /** Increments the counter for this filter. (Adds one match.) */
     public void incrementCounter() { this.counter++; }
     /** Gets the name (title) for this filter's corresponding category. */
@@ -50,19 +65,17 @@ public class CategoryFilter {
     public String getApplyOrRemoveLink(String parameterNameCategory, String linkTarget, String requestParameterString) {
         String filterLink = "";
         if (requestParameterString.contains(this.getUri())) {
-            filterLink = "<a style=\"font-weight:bold;\" class=\"remove\" href=\"" + linkTarget + "?" + requestParameterString;
+            filterLink = "<a style=\"font-weight:bold;\" class=\"remove filter filter--active\" href=\"" + linkTarget + "?" + requestParameterString;
             filterLink = filterLink.replace(parameterNameCategory + "=".concat(this.getUri()), "");
             filterLink = filterLink.replace("&amp;&amp;", "&amp;"); // If multiple categories were in the URL, we just created "&&"
             filterLink = filterLink.endsWith("?") ? filterLink.substring(0, filterLink.length() - 1) : filterLink; // Remove trailing ?
             filterLink = filterLink.endsWith("&amp;") ? filterLink.substring(0, filterLink.length() - 5) : filterLink; // Remove trailing &
-            filterLink += "\" rel=\"nofollow\">" + this.getName() + " <span class=\"remove-filter\""
-                        + " style=\"background:red; border-radius:3px; color:white; padding:0 0.3em;\""
-                        + ">X</span></a>";
+            filterLink += "\" rel=\"nofollow\">" + this.getName() + "</a>";
         }
         else {
-            filterLink = "<a href=\"" + linkTarget + "?" + 
+            filterLink = "<a class=\"filter\" href=\"" + linkTarget + "?" + 
                                         requestParameterString + "&amp;" + parameterNameCategory + "=" + this.getUri() + "\" rel=\"nofollow\">" + 
-                                        this.getName() + " (" + this.getCounter() + ")</a>";
+                                        this.getName() + "<span class=\"filter__num-matches\"> (" + this.getCounter() + ")</span></a>";
         }
         return filterLink;
     }

@@ -8,8 +8,16 @@ import java.util.Iterator;
 import org.opencms.relations.CmsCategory;
 
 /**
- * A set of filters. The set is identified by its root/parent category, and each 
- * filter in the set must be a sub-category of that category.
+ * A set of filters.
+ * <p>
+ * The set is identified by its root/parent category, and each filter in the 
+ * set must be a sub-category of that category.
+ * <p>
+ * e.g.: 
+ * Topic (the root)
+ *  - Climate (category)
+ *  - Biodiversity (category)
+ *  - Pollutants (category)
  * 
  * @author flakstad
  */
@@ -49,6 +57,7 @@ public class CategoryFilterSet {
     
     /** 
     * Creates a new category filter set, with the given root/parent category. 
+    * 
     * @param rootCategory  The category to use as root/parent category
     */
     public CategoryFilterSet(CmsCategory rootCategory) {
@@ -56,11 +65,17 @@ public class CategoryFilterSet {
         this.rootCategory = rootCategory;
     }
     
-    /** Gets the category filters in this set. */
+    /** 
+     * Gets the category filters in this set. 
+     * 
+     * @return The category filters in this set.
+     */
     public List<CategoryFilter> getCategoryFilters() { return this.filterSet; }
     
     /** 
-    * Adds a category filter to this set. 
+    * Adds a category filter to this set, and increments the counter for that 
+    * filter.
+    * 
     * @param filter  The filter to add to this set.
     */
     public void addCategoryFilter(CategoryFilter filter) {
@@ -70,11 +85,20 @@ public class CategoryFilterSet {
         filter = this.filterSet.get(this.filterSet.indexOf(filter));
         filter.incrementCounter();
     }
-    /** Gets the title for this category filter set. It is identical to the parent/root category's title. */
-    public String getTitle() { return this.rootCategory.getTitle(); }
+    
+    /** 
+     * Gets the title for this category filter set, which is identical to the 
+     * parent/root category's title. 
+     * 
+     * @return the title for this category filter set.
+     */
+    public String getTitle() { 
+        return this.rootCategory.getTitle(); 
+    }
     
     /** 
     * Sorts the filters currently in this set according to the given sort mode. 
+    * 
     * @param sortMode  The sort mode (possible values are given by the SORT_MODE_XXX members of this class).
     */
     public void sortCategoryFilters(int sortMode) {
@@ -97,6 +121,7 @@ public class CategoryFilterSet {
     /**
     * Removes from this set all category filters whose category corresponds to 
     * any of the given excluded categories or their sub-categories.
+    * 
     * @param excludedCategories  The list of excluded categories to evaluate when removing filters from this set.
     */
     public void excludeAll(List<CmsCategory> excludedCategories) {
@@ -115,16 +140,24 @@ public class CategoryFilterSet {
     }
     
     /** 
-     * Tests if a given category is a sub-category of or identical to a reference category. 
-     * @return true if the the given category is a sub-category of the reference category or the reference category itself, false if not.
+     * Tests if a given test category is a sub-category of or identical to a 
+     * reference category.
+     * 
+     * @param test The category to test.
+     * @param reference The reference category, to test against.
+     * @return true if the the given test category is a sub-category of the reference category or the reference category itself, false if not.
      */
     public static boolean isCategoryOrSubCategory(CmsCategory test, CmsCategory reference) {
-        if (test.getRootPath().startsWith(reference.getRootPath()))
+        if (test.getRootPath().startsWith(reference.getRootPath())) {
             return true;
+        }
         return false;
     }
     
-    /** Overrides Object#equals(Object): Returns true if the root/parent categories' root paths are identical. */
+    /** 
+     * Overrides Object#equals(Object): Returns true if the root/parent 
+     * categories' root paths are identical. 
+     */
     @Override
     public boolean equals(Object that) {
         if (this == that)

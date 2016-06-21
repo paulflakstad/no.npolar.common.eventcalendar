@@ -483,6 +483,44 @@ public class EventCalendar extends GregorianCalendar {
     }
     
     /**
+     * Test method
+     * @param start
+     * @param end
+     * @param cms
+     * @param eventsFolder
+     * @param undatedFolders
+     * @param excludedFolders
+     * @param categories
+     * @param excludeExpired
+     * @param sortDescending
+     * @param overlapLenient
+     * @param categoryInclusive
+     * @param includeRecurrences
+     * @param resultLimit
+     * @return
+     * @throws CmsException
+     * @throws IllegalArgumentException 
+     */
+    /*public List getEventsInRange(long start, 
+                            long end, 
+                            CmsJspActionElement cms, 
+                            String eventsFolder, 
+                            List undatedFolders, 
+                            List excludedFolders,
+                            List categories, 
+                            boolean excludeExpired, 
+                            boolean sortDescending, 
+                            boolean overlapLenient,
+                            boolean categoryInclusive,
+                            boolean includeRecurrences,
+                            int resultLimit) throws CmsException, IllegalArgumentException {
+        List events = ;
+        //List originalEvents = getEvents(start, end, cms, eventsFolder, undatedFolders, excludedFolders, categories, excludeExpired, sortDescending, overlapLenient, categoryInclusive, resultLimit);
+        return events;
+        
+    }*/
+    
+    /**
      * Gets a list of events within a given standard range.<p>
      * 
      * A setting of "overlap lenient" and "category inclusive" is used.<p>
@@ -546,8 +584,8 @@ public class EventCalendar extends GregorianCalendar {
             */
         } 
         else if (range == RANGE_CURRENT_MONTH) {
-            start = this.get(Calendar.YEAR) + "-" + (this.get(Calendar.MONTH)+1) + "-01" + " 00:00:00";
-            end = this.get(Calendar.YEAR) + "-" + (this.get(Calendar.MONTH)+1) + "-" + this.getActualMaximum(Calendar.DATE) + " 23:59:59";
+            start = this.get(Calendar.YEAR) + "-" + this.getNormalizedMonth() + "-01" + " 00:00:00";
+            end = this.get(Calendar.YEAR) + "-" + this.getNormalizedMonth() + "-" + this.getActualMaximum(Calendar.DATE) + " 23:59:59";
         }
         else if (range == RANGE_CURRENT_YEAR) {
             start = this.get(Calendar.YEAR) +   "-01-01" + " 00:00:00";
@@ -614,6 +652,49 @@ public class EventCalendar extends GregorianCalendar {
     }
     
     /**
+     * Gets the "normal" numeric month; "01" (January) to "12" (December). 
+     * <p>
+     * Month numbers 1-9 are prefixed with a zero.
+     * 
+     * @return  the "normal" numeric month, prefixed (if needed) with a zero.
+     * @see #toZeroPrefixed(int) 
+     */
+    public String getNormalizedMonth() {
+        int month = this.get(Calendar.MONTH)+1; // Zero-based, so add 1
+        return toZeroPrefixed(month);
+    }
+    
+    /**
+     * Gets the "normal" numeric date; "01" to "31". 
+     * <p>
+     * Dates in the range 1-9 are prefixed with a zero.
+     * 
+     * @return  the "normal" numeric date, prefixed (if needed) with a zero.
+     * @see #toZeroPrefixed(int) 
+     */
+    public String getNormalizedDate() {
+        int date = this.get(Calendar.DATE);
+        return toZeroPrefixed(date);
+    }
+    
+    /**
+     * Gets a string representing the given value, prefixed with a zero, if its 
+     * in the range 0-9.
+     * <p>
+     * If the given value is larger than 9 or less than zero, it is returned 
+     * unmodified.
+     * 
+     * @param value The field, e.g. {@link Calendar#MONTH}.
+     * @return The field value, prefixed (if needed) with a zero to make it a 2-digit number.
+     */
+    public static String toZeroPrefixed(int value) {
+        if (value >= 0 && 9 <= value) {
+            return "0".concat(String.valueOf(value));
+        }
+        return String.valueOf(value);
+    }
+    
+    /**
      * Gets the clock time as a string, using the given values.
      * 
      * @param hour The hour of day (as returned by Calendar#get(Calendar#HOUR_OF_DAY).
@@ -624,9 +705,9 @@ public class EventCalendar extends GregorianCalendar {
      */
     protected String getClockTimeString(int hour, int min, int sec) {
         return ""
-                + (hour < 10 ? "0"+hour : hour) + ":"
-                + (min < 10 ? "0"+min : min) + ":"
-                + (sec < 10 ? "0"+sec : sec);
+                + toZeroPrefixed(hour) + ":"
+                + toZeroPrefixed(min) + ":"
+                + toZeroPrefixed(sec);
     }
     
     /**
@@ -634,17 +715,23 @@ public class EventCalendar extends GregorianCalendar {
      * 
      * @param cal The Calendar to use when constructing the clock time String.
      * 
-     * @return The clock time.
+     * @return The clock time (using the 24-hour clock), in a <code>HH:mm:ss</code> format. 
      */
     protected String getClockTimeString(Calendar cal) {
         return getClockTimeString(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), cal.get(Calendar.SECOND));
     }
     
+    /**
+     * Gets the year, month and date as a String, using the given Calendar.
+     * 
+     * @param cal The calendar to use when constructing the string.
+     * @return  the year, month and date, in a <code>yyyy-MM-dd</code> format.
+     */
     protected String getYearMonthDateString(Calendar cal) {
         return ""
                 + cal.get(Calendar.YEAR) + "-"
-                + (cal.get(Calendar.MONTH)+1) + "-"
-                + cal.get(Calendar.DATE);
+                + toZeroPrefixed(cal.get(Calendar.MONTH)+1) + "-"
+                + toZeroPrefixed(cal.get(Calendar.DATE));
     }
     
     /**

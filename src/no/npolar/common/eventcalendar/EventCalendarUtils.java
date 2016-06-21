@@ -1,18 +1,27 @@
 package no.npolar.common.eventcalendar;
 
+import com.google.ical.values.DateValue;
+import com.google.ical.values.DateValueImpl;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import no.npolar.common.eventcalendar.view.CategoryFilter;
+import java.util.TimeZone;
+//import no.npolar.common.eventcalendar.view.CategoryFilter;
+import org.opencms.db.CmsUserSettings;
 import org.opencms.file.CmsObject;
 import org.opencms.main.CmsException;
 import org.opencms.relations.CmsCategory;
 import org.opencms.relations.CmsCategoryService;
 
 /**
- *
- * @author flakstad
+ * Helper methods for the events package.
+ * 
+ * @author Paul-Inge Flakstad, Norwegian Polar Institute.
  */
 public class EventCalendarUtils {
     public EventCalendarUtils() {
@@ -84,6 +93,126 @@ public class EventCalendarUtils {
             }
         }
         return null;
+    }
+    
+    /**
+     * Gets a Calendar that represents the start of the day defined by the 
+     * given date.
+     * 
+     * @param d The date to get the start for.
+     * @return A Calendar that represents the start of the day defined by the given date.
+     */
+    public static Calendar getDateStartCal(Date d) {
+        Calendar dateStartCal = new GregorianCalendar();
+        dateStartCal.setTime(d);
+        dateStartCal.set(Calendar.HOUR_OF_DAY, 0);
+        dateStartCal.set(Calendar.MINUTE, 0);
+        dateStartCal.set(Calendar.SECOND, 0);
+        return dateStartCal;
+    }
+    /**
+     * Gets a Calendar that represents the end of the day defined by the 
+     * given date.
+     * 
+     * @param d The date to get the end for.
+     * @return A Calendar that represents the end of the day defined by the given date.
+     */
+    public static Calendar getDateEndCal(Date d) {
+        Calendar dateEndCal = new GregorianCalendar();
+        dateEndCal.setTime(d);
+        dateEndCal.set(Calendar.HOUR_OF_DAY, 23);
+        dateEndCal.set(Calendar.MINUTE, 59);
+        dateEndCal.set(Calendar.SECOND, 59);
+        return dateEndCal;
+    }
+    
+    /**
+     * Helper method for getting the timestamp for the end of the day represented 
+     * by the given timestamp.
+     * @param timeInMillis The timestamp to evaluate.
+     * @return The end of the day represented by the given timestamp.
+     */
+    public static long getEndOfDay(long timeInMillis) {
+        Calendar temp = new GregorianCalendar();
+        temp.setTimeInMillis(timeInMillis);
+        temp.set(Calendar.HOUR_OF_DAY, temp.getActualMaximum(Calendar.HOUR_OF_DAY));
+        temp.set(Calendar.MINUTE, temp.getActualMaximum(Calendar.MINUTE));
+        temp.set(Calendar.SECOND, temp.getActualMaximum(Calendar.SECOND));
+        return temp.getTimeInMillis();
+    }
+    
+    /**
+     * Helper method for getting the timestamp for the start of the day represented 
+     * by the given timestamp.
+     * @param timeInMillis The timestamp to evaluate.
+     * @return The start of the day represented by the given timestamp.
+     */
+    public static long getStartOfDay(long timeInMillis) {
+        Calendar temp = new GregorianCalendar();
+        temp.setTimeInMillis(timeInMillis);
+        temp.set(Calendar.HOUR_OF_DAY, temp.getActualMinimum(Calendar.HOUR_OF_DAY));
+        temp.set(Calendar.MINUTE, temp.getActualMinimum(Calendar.MINUTE));
+        temp.set(Calendar.SECOND, temp.getActualMinimum(Calendar.SECOND));
+        return temp.getTimeInMillis();
+    }
+    
+    /**
+     * Converts the given Date instance to a DateValue instance.
+     */
+    public static DateValue convertToDateValue(Date d) {
+        Calendar helperCal = new GregorianCalendar(TimeZone.getTimeZone("GMT+1:00"), new Locale("no")); // Locale is just a random one
+        helperCal.setTime(d);
+        return new DateValueImpl(helperCal.get(Calendar.YEAR), helperCal.get(Calendar.MONTH)+1, helperCal.get(Calendar.DATE));
+    }
+    /**
+     * Converts the given DateValue instance to a Date instance.
+     * <p>
+     * As DateValue know no clock time, it is set to 12:00:00 in the returned 
+     * Date instance.
+     */
+    public static Date convertToDate(DateValue dv) {
+        Calendar helperCal = new GregorianCalendar(TimeZone.getTimeZone("GMT+1:00"), new Locale("no")); // Locale is just a random one
+        helperCal.set(dv.year(), dv.month()-1, dv.day(), 12, 0, 0);
+        return helperCal.getTime();
+    }
+    
+    /**
+     * Gets the workplace timestamp as a Date instance.
+     * <p>
+     * If time warp is active, the returned datetime will be the "warped" time. 
+     * Otherwise, the actual "now" is returned.
+     *
+     * @param cmso An initialized CmsObject.
+     * @return Date The current workplace "now", as a Date instance - either the actual "now" or a time-warped "now".
+     */
+    public static Date getOpenCmsNowDate(CmsObject cmso) {
+        long userCurrentTime = new Date().getTime();
+        Object timeWarpObj = cmso.getRequestContext().getCurrentUser().getAdditionalInfo(CmsUserSettings.ADDITIONAL_INFO_TIMEWARP);
+        try {
+            userCurrentTime = (Long)timeWarpObj;
+        } catch (ClassCastException e) {
+            try {
+                userCurrentTime = Long.parseLong((String)timeWarpObj);
+                if (userCurrentTime < 0) {
+                    userCurrentTime = new Date().getTime();
+                }
+            } catch (Throwable t) {}
+        } catch (Throwable t) {}
+        
+        return new Date(userCurrentTime);
+        
+        /*HttpSession s = cmso.getRequestContext().getRequest().getSession();
+        Date now = new Date();
+        try {
+            // Try to set the current date to the warped time (if active), fallback to the "actual" now
+            CmsWorkplaceSettings settings = (CmsWorkplaceSettings)s.getAttribute(CmsWorkplaceManager.SESSION_WORKPLACE_SETTINGS);
+            long timewarp = settings.getUserSettings().getTimeWarp();
+            if (timewarp > 1) {
+                return new Date(timewarp);
+            }
+        } catch (Exception e) {
+
+        }*/
     }
     
     

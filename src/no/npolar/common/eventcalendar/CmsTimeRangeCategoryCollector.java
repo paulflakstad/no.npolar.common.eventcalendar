@@ -1,5 +1,6 @@
 package no.npolar.common.eventcalendar;
 
+import java.math.BigDecimal;
 import org.opencms.file.CmsDataAccessException;
 import org.opencms.file.CmsObject;
 import org.opencms.file.CmsProperty;
@@ -24,41 +25,44 @@ import java.util.Iterator;
 import java.util.List;
 import org.opencms.file.collectors.*;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * Collector to fetch resources based on time and possibly also category, very
- * similar to OpenCms' own CmsTimeFrameCategoryCollector. The main difference is 
- * that this collector can take into account a resource's ending time as well as 
- * it's start time.<p>
- * 
+ * similar to OpenCms' own CmsTimeFrameCategoryCollector.
+ * <p>
+ * The main difference is that this collector can take into account a resource's 
+ * end time as well as it's start time.
+ * <p> 
  * The parameter string should be specified as follows: 
  * <pre>
  * key=value
  * </pre>
  * <p>
- * Many key - value pairs may exist: 
+ * Multiple key-value pairs are pipe-separated: 
  * <pre>
  * key=value|key2=value2|key3=value3
  * </pre>
  * <p>
- * The following keys are reserved: 
+ * Reserved keys (not to be used in custom implementations): 
  * <ul>
  * <li>
  * <b>resource</b><br/>
- * The value defines the folder or single file for collection of results. 
+ * The value defines the folder or single file to base the collection on.
  * </li>
  * <li>
  * <b>resourceType</b><br/>
- * The value defines the name of the type of resource that is required for the result as 
- * defined in opencms-modules.xml, opencms-workplace.xml. 
+ * The value defines the type name for the kind of resources to collect.
  * </li>
  * <li>
  * <b>resultLimit</b><br/>
- * The value defines the maximum amount of results to return. 
+ * The value defines the maximum amount of results to return.
  * </li>
  * <li>
  * <b>sortDescending</b><br/>
  * The value defines if the result is sorted in descending ("true") or ascending 
- * (anything else than "true") order. 
+ * (anything else than "true") order. Note that sorting is done by start time.
  * </li>
  * <li>
  * <b>timeStart</b><br/>
@@ -86,27 +90,27 @@ import org.opencms.file.collectors.*;
  * <li>
  * <b>categoryInclusive</b><br/>
  * The value (true or false) determines how the collector should behave when 
- * collecting resources using multiple categories. There are two ways to 
- * treat multiple categories: inclusive and exclusive. Inclusive means that 
+ * multiple categories are passed, to use as filters. There are 2 applications 
+ * of multiple category filters: inclusive and exclusive. Inclusive means that 
  * a resource belonging to ANY of the categories will be collected. Exclusive 
  * means that a resource must belong to ALL of the categories to be collected.
  * </li>
  * <li>
  * <b>propertyTimeStart</b><br/>
  * The value defines the name of the property that is inspected for a time stamp 
- * in <code> {@link System#currentTimeMillis()}</code> syntax for the validity time frame 
- * check. 
+ * in <code> {@link System#currentTimeMillis()}</code> syntax for the validity 
+ * time frame check. 
  * </li>
  * <li>
  * <b>propertyTimeEnd</b><br/>
  * The value defines the name of the property that is inspected for a time stamp 
- * in <code> {@link System#currentTimeMillis()}</code> syntax for the validity time frame 
- * check. 
+ * in <code> {@link System#currentTimeMillis()}</code> syntax for the validity 
+ * time frame check. 
  * </li>
  * <li>
  * <b>propertyCategories</b><br/>
- * The value defines the name of the property that is inspected for a pipe separated 
- * list of category strings. 
+ * The value defines the name of the property that is inspected for a pipe 
+ * separated list of category strings. 
  * </li>
  * <li>
  * <b>categories</b><br/>
@@ -217,6 +221,9 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
 
         /** The collector parameter key for the categories: value is a list of comma - separated Strings. */
         public static final String PARAM_KEY_CATEGORIES = "categories";
+        
+        /** The collector parameter key for URIs of folders to exclude. */
+        public static final String PARAM_KEY_EXCLUDE_FOLDERS = "excludeFolders";
 
         /** The collector parameter key for the name of the categories property used to filter resources by. */
         public static final String PARAM_KEY_PROPERTY_CATEGORIES = "propertyCategories";
@@ -252,6 +259,13 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
          */
         public static final String PARAM_KEY_EXCLUDE_EXPIRED = "excludeExpired";
         
+        /**
+         * The collector parameter key for the 'include recurrences' setting.
+         * <p>
+         * Default is <code>true</code>.
+         */
+        public static final String PARAM_KEY_INCLUDE_RECURRENCES = "includeRecurrences";
+        
         /** The collector parameter key for overlap leniency. 
          * 'false' will require the resource's entire time range to be within the collector's time range (more restrictive than 'true'). 
          * 'true' will require the resource's time range to somehow overlap the collector's time range (less restrictive than 'false'). 
@@ -267,8 +281,11 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
          */
         public static final String PARAM_KEY_CATEGORY_INCLUSIVE = "categoryInclusive";
 
-        /** The List &lt;String&gt; containing the categories to allow. */
+        /** List containing the (root paths of) categories to allow (if any). */
         private List m_categories = Collections.EMPTY_LIST;
+        
+        /** List containing folders to exclude (if any). */
+        private List m_excludedFolders = Collections.EMPTY_LIST;
 
         /** The display count. */
         private int m_count;
@@ -288,8 +305,11 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
         /** If true results should be sorted in descending order.*/
         private boolean m_sortDescending;
         
-        /**If true, result lists should not contain any candidates with end time in the past. */
+        /** If true, result lists should not contain any candidates with end time in the past. */
         private boolean m_excludeExpired = false;
+        
+        /** If true, result lists should include recurrences. */
+        private boolean m_includeRecurrences = true;
         
         /** Flag for how to determine if a resource is within the validity time frame. If true, a resource will only have to overlap the validity time frame, not be completely within it. */
         private boolean m_overlapLenient = true;
@@ -329,13 +349,21 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
         }
 
         /**
-         * Returns The List &lt;String&gt; containing the categories to allow.<p>
+         * Returns the List containing the (root paths of) categories to allow.<p>
          *
-         * @return The List &lt;String&gt; containing the categories to allow.
+         * @return The List containing the (root paths of) categories to allow.
          */
-        public List getCategories() {
-
+        public List<String> getCategories() {
             return m_categories;
+        }
+        
+        /**
+         * Returns the list containing excluded folders (if any).<p>
+         *
+         * @return The list containing excluded folders, or an empty list if none.
+         */
+        public List getExcludedFolders() {
+            return m_excludedFolders;
         }
 
         /**
@@ -462,6 +490,17 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
         }
         
         /**
+         * If true, recurrences may appear in the results.
+         * <p>
+         * Defaults to true.
+         * 
+         * @return true if the recurrences are included in results, false if not.
+         */
+        public boolean isIncludeRecurrences() {
+            return m_includeRecurrences;
+        }
+        
+        /**
          * Defines whether the collector's timerange is restrictive or inclusive.<p>
          * 
          * True indicates inclusive, resources need only have their time range overlap the collector's time range in some way.
@@ -527,19 +566,53 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
                 } else if (PARAM_KEY_SORT_DESCENDING.equals(key)) {
                     m_sortDescending = Boolean.valueOf(value).booleanValue();
                 } else if (PARAM_KEY_TIMEFRAME_START.equals(key)) {
-                    m_timeFrameStart = DATEFORMAT_SQL.parse(value).getTime();                    
+                    try {
+                        m_timeFrameStart = DATEFORMAT_SQL.parse(value).getTime();
+                    } catch (Exception e) {
+                        try {
+                            m_timeFrameStart = Long.parseLong(value);
+                        } catch (Exception ee) {
+                            try {
+                                m_timeFrameStart = new BigDecimal(value).longValue();
+                            } catch (Exception eee) {
+                                m_timeFrameStart = 0;
+                                if (LOG.isErrorEnabled()) {
+                                    LOG.error("Unable to parse start time " + value + " for time range collector. (Collecting from " + m_fileName + ".)");
+                                }
+                            }
+                        }
+                    }
                 } else if (PARAM_KEY_TIMEFRAME_END.equals(key)) {
-                    m_timeFrameEnd = DATEFORMAT_SQL.parse(value).getTime();
+                    try {
+                        m_timeFrameEnd = DATEFORMAT_SQL.parse(value).getTime();
+                    } catch (Exception e) {
+                        try {
+                            m_timeFrameEnd = Long.parseLong(value);
+                        } catch (Exception ee) {
+                            try {
+                                m_timeFrameEnd = new BigDecimal(value).longValue();
+                            } catch (Exception eee) {
+                                m_timeFrameEnd = 0;
+                                if (LOG.isErrorEnabled()) {
+                                    LOG.error("Unable to parse end time " + value + " for time range collector. (Collecting from " + m_fileName + ".)");
+                                }
+                            }
+                        }
+                    }
                 } else if (PARAM_KEY_PROPERTY_TIME_START.equals(key)) {
                     m_propertyTimeStart.setName(value);
                 } else if (PARAM_KEY_PROPERTY_TIME_END.equals(key)) {
                     m_propertyTimeEnd.setName(value);
                 } else if (PARAM_KEY_CATEGORIES.equals(key)) {
                     m_categories = CmsStringUtil.splitAsList(value, ',');
+                } else if (PARAM_KEY_EXCLUDE_FOLDERS.equals(key)) {
+                    m_excludedFolders = CmsStringUtil.splitAsList(value, ',');
                 } else if (PARAM_KEY_PROPERTY_CATEGORIES.equals(key)) {
                     m_propertyCategories.setName(value);
                 } else if (PARAM_KEY_EXCLUDE_EXPIRED.equals(key)) {
                     m_excludeExpired = Boolean.valueOf(value).booleanValue();
+                } else if (PARAM_KEY_INCLUDE_RECURRENCES.equals(key)) {
+                    m_includeRecurrences = Boolean.valueOf(value).booleanValue();
                 } else if (PARAM_KEY_OVERLAP_LENIENT.equals(key)) {
                     m_overlapLenient = Boolean.valueOf(value).booleanValue();
                 } else if (PARAM_KEY_CATEGORY_INCLUSIVE.equals(key)) {
@@ -558,10 +631,13 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
     protected static final String COLLECTOR_NAME = "timeRangeAndCategories";
 
     /** Sorted set for fast collector name lookup. */
-    private static final List COLLECTORS_LIST = Collections.unmodifiableList(Arrays.asList(new String[] {COLLECTOR_NAME}));
+    private static final List COLLECTORS_LIST = Collections.unmodifiableList(Arrays.asList( new String[] {COLLECTOR_NAME} ));
 
     /** SQL Standard date format: "yyyy-MM-dd HH:mm:ss".*/
     public static final DateFormat DATEFORMAT_SQL = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    
+    /** The logger. */
+    private static final Log LOG = LogFactory.getLog(CmsTimeRangeCategoryCollector.class);
     
     /** Collector parameters */
     protected CollectorDataPropertyBased data = null;
