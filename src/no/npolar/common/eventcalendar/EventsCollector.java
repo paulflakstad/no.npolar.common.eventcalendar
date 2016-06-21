@@ -285,11 +285,8 @@ public class EventsCollector {
      * Collects events using the given collector parameters.<p>
      * 
      * @param collectorParam The collector parameters
-     * 
      * @return A list of EventEntry objects collected using the given parameters
-     * 
      * @throws org.opencms.main.CmsException If something goes wrong when attempting to collect the events
-     * 
      * @see #getCollectorParameterString(java.lang.String, java.lang.String, java.lang.String, java.util.List, boolean, int)
      * @see TimeRangeCategoryEventCollector#getEvents(org.opencms.file.CmsObject, java.lang.String)
      */
