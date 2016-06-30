@@ -91,7 +91,7 @@ public class ResourceCategoriesFilter {
     }
     
     /**
-     * Filters the given resources by evaluating their assigned categories.
+     * Filters the given events by evaluating their assigned categories.
      * <p>
      * The filter mode is used to determine how to evaluate if a resource matches 
      * the filter or not. There are 2 mode alternatives:
