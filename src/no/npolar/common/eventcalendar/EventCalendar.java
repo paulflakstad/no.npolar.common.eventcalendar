@@ -688,7 +688,7 @@ public class EventCalendar extends GregorianCalendar {
      * @return The field value, prefixed (if needed) with a zero to make it a 2-digit number.
      */
     public static String toZeroPrefixed(int value) {
-        if (value >= 0 && 9 <= value) {
+        if (value >= 0 && value <= 9) {
             return "0".concat(String.valueOf(value));
         }
         return String.valueOf(value);
