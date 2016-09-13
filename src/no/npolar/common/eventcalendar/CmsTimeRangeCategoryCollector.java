@@ -577,7 +577,7 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
                             } catch (Exception eee) {
                                 m_timeFrameStart = 0;
                                 if (LOG.isErrorEnabled()) {
-                                    LOG.error("Unable to parse start time " + value + " for time range collector. (Collecting from " + m_fileName + ".)");
+                                    LOG.error("Unable to parse start time '" + value + "' for time range collector. (Collecting from " + m_fileName + ".)", eee);
                                 }
                             }
                         }
@@ -594,7 +594,7 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
                             } catch (Exception eee) {
                                 m_timeFrameEnd = 0;
                                 if (LOG.isErrorEnabled()) {
-                                    LOG.error("Unable to parse end time " + value + " for time range collector. (Collecting from " + m_fileName + ".)");
+                                    LOG.error("Unable to parse end time '" + value + "' for time range collector. (Collecting from " + m_fileName + ".)", eee);
                                 }
                             }
                         }
