@@ -1,6 +1,6 @@
 package no.npolar.common.eventcalendar;
 
-import java.math.BigDecimal;
+//import java.math.BigDecimal;
 import org.opencms.file.CmsDataAccessException;
 import org.opencms.file.CmsObject;
 import org.opencms.file.CmsProperty;
@@ -527,7 +527,7 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
         public boolean isCategoryInclusive() {
             return m_categoryInclusive;
         }
-
+        
         /**
          * Internally parses the constructor-given param into the data model 
          * of this instance.<p> 
@@ -567,36 +567,20 @@ public class CmsTimeRangeCategoryCollector extends A_CmsResourceCollector {
                     m_sortDescending = Boolean.valueOf(value).booleanValue();
                 } else if (PARAM_KEY_TIMEFRAME_START.equals(key)) {
                     try {
-                        m_timeFrameStart = DATEFORMAT_SQL.parse(value).getTime();
+                        m_timeFrameStart = EventCalendarUtils.parseTimestamp(value);
                     } catch (Exception e) {
-                        try {
-                            m_timeFrameStart = Long.parseLong(value);
-                        } catch (Exception ee) {
-                            try {
-                                m_timeFrameStart = new BigDecimal(value).longValue();
-                            } catch (Exception eee) {
-                                m_timeFrameStart = 0;
-                                if (LOG.isErrorEnabled()) {
-                                    LOG.error("Unable to parse start time '" + value + "' for time range collector. (Collecting from " + m_fileName + ".)", eee);
-                                }
-                            }
+                        m_timeFrameStart = 0;
+                        if (LOG.isErrorEnabled()) {
+                            LOG.error("Error trying to set '" + value + "' as time frame start (collecting from " + m_fileName + ").", e);
                         }
                     }
                 } else if (PARAM_KEY_TIMEFRAME_END.equals(key)) {
                     try {
-                        m_timeFrameEnd = DATEFORMAT_SQL.parse(value).getTime();
+                        m_timeFrameEnd = EventCalendarUtils.parseTimestamp(value);
                     } catch (Exception e) {
-                        try {
-                            m_timeFrameEnd = Long.parseLong(value);
-                        } catch (Exception ee) {
-                            try {
-                                m_timeFrameEnd = new BigDecimal(value).longValue();
-                            } catch (Exception eee) {
-                                m_timeFrameEnd = 0;
-                                if (LOG.isErrorEnabled()) {
-                                    LOG.error("Unable to parse end time '" + value + "' for time range collector. (Collecting from " + m_fileName + ".)", eee);
-                                }
-                            }
+                        m_timeFrameEnd = 0;
+                        if (LOG.isErrorEnabled()) {
+                            LOG.error("Error trying to set '" + value + "' as time frame end (collecting from " + m_fileName + ").", e);
                         }
                     }
                 } else if (PARAM_KEY_PROPERTY_TIME_START.equals(key)) {
