@@ -2,6 +2,8 @@ package no.npolar.common.eventcalendar;
 
 import com.google.ical.values.DateValue;
 import com.google.ical.values.DateValueImpl;
+import java.math.BigDecimal;
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -11,6 +13,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 //import no.npolar.common.eventcalendar.view.CategoryFilter;
 import org.opencms.db.CmsUserSettings;
 import org.opencms.file.CmsObject;
@@ -24,12 +28,17 @@ import org.opencms.relations.CmsCategoryService;
  * @author Paul-Inge Flakstad, Norwegian Polar Institute.
  */
 public class EventCalendarUtils {
+    /** The logger. */
+    private static final Log LOG = LogFactory.getLog(EventCalendarUtils.class);
+    
     public EventCalendarUtils() {
         
     }
     
     /**
-     * Capitalizes the given String.
+     * Capitalizes the first letter of the given String.
+     * 
+     * @param s The string to capitalize.
      */
     public static String capitalize(String s) {
         return String.valueOf(s.charAt(0)).toUpperCase().concat(s.substring(1));
@@ -37,6 +46,8 @@ public class EventCalendarUtils {
     
     /**
      * Converts the given parameter map to a String.
+     * 
+     * @param params The parameter map to use as base.
      */  
     public static String getParameterString(Map params) {
         if (params == null)
@@ -79,7 +90,7 @@ public class EventCalendarUtils {
      * 
      * @return The first category in the list of possible matches that matches the given category, or null if there is no match.
      */
-    public static CmsCategory matchCategoryOrParent(List<CmsCategory> possibleMatches, CmsCategory category, CmsObject cmso, String categoryReferencePath) throws CmsException {
+    public static CmsCategory matchCategoryOrParent(List<CmsCategory> possibleMatches, CmsCategory category, CmsObject cmso, String categoryReferencePath) /*throws CmsException*/ {
         CmsCategoryService cs = CmsCategoryService.getInstance();
         String catPath = category.getPath();
         CmsCategory tempCat = null;
@@ -129,6 +140,7 @@ public class EventCalendarUtils {
     /**
      * Helper method for getting the timestamp for the end of the day represented 
      * by the given timestamp.
+     * 
      * @param timeInMillis The timestamp to evaluate.
      * @return The end of the day represented by the given timestamp.
      */
@@ -144,6 +156,7 @@ public class EventCalendarUtils {
     /**
      * Helper method for getting the timestamp for the start of the day represented 
      * by the given timestamp.
+     * 
      * @param timeInMillis The timestamp to evaluate.
      * @return The start of the day represented by the given timestamp.
      */
@@ -169,6 +182,8 @@ public class EventCalendarUtils {
      * <p>
      * As DateValue know no clock time, it is set to 12:00:00 in the returned 
      * Date instance.
+     * 
+     * @param dv The DateValue to convert.
      */
     public static Date convertToDate(DateValue dv) {
         Calendar helperCal = new GregorianCalendar(TimeZone.getTimeZone("GMT+1:00"), new Locale("no")); // Locale is just a random one
@@ -213,6 +228,45 @@ public class EventCalendarUtils {
         } catch (Exception e) {
 
         }*/
+    }
+        
+    /**
+     * Attempts to parse the given timestamp and return it as a 
+     * <code>long</code>.
+     * <p>
+     * The given timestamp can be either a string in the format described by 
+     * {@link CmsTimeRangeCategoryCollector#DATEFORMAT_SQL} (preferred) or it 
+     * can be a numeric (long) representation of a point in time, following the
+     * same convention as {@link Date#getTime()}.
+     * <p>
+     * If no parsing approach is successful, an exception is thrown.
+     * 
+     * @param timestamp The timestamp, in "human" or numeric format.
+     * @return The parsed timestamp's numeric counterpart, following the same convention as {@link Date#getTime()}.
+     * @throws ParseException If all attempts to parse failed.
+     */
+    public static long parseTimestamp(String timestamp) throws ParseException {
+        long parsed;
+        try {
+            parsed = CmsTimeRangeCategoryCollector.DATEFORMAT_SQL.parse(timestamp).getTime();
+        } catch (Exception e) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("Unable to parse '" + timestamp + "' using standard date format, next fallback: parse as long...");
+            }
+            try {
+                parsed = Long.parseLong(timestamp);
+            } catch (Exception ee) {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Unable to parse '" + timestamp + "' as long, next fallback: parse as BigDecimal...");
+                }
+                try {
+                    parsed = new BigDecimal(timestamp).longValue();
+                } catch (Exception eee) {
+                    throw new ParseException("All attempts to parse '" + timestamp + "' failed: " + eee.getMessage(), 0);
+                }
+            }
+        }
+        return parsed;
     }
     
     

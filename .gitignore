@@ -11,6 +11,7 @@
 /lib/
 # Non-interesting stuff
 *~
+/src/no/npolar/common/eventcalendar/test/*
 /src/main/Main.java
 /manifest.mf
 
